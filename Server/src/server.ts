@@ -2,6 +2,7 @@ import express, {Application, Request, Response } from "express";
 import cors from "cors"
 import dotenv from "dotenv";
 import prisma from "./DB/Prisma";
+import authRoutes from "./routes/auth.routes"
 
 dotenv.config()
 const app : Application= express();
@@ -18,6 +19,10 @@ app.get("/health", (req: Request, res: Response) => {
     timestamp : new Date().toISOString()
   })
 });
+// Auth routes
+app.use("/api/auth", authRoutes)
+
+
 
 const startServer = async () => {
 

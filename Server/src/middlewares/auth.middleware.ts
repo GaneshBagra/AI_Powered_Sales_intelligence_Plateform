@@ -37,3 +37,16 @@ export const authMiddleware = (req:AuthenticatedRequest,res:Response,next :NextF
 
 
 }
+
+export const authorizeRoles = (...allowedRoles: string[]) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || !allowedRoles.includes(req.user.Role)) {
+      res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have permissions for this action",
+      });
+      return;
+    }
+    next();
+  };
+};
