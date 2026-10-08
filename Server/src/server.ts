@@ -1,10 +1,10 @@
-import express, { Request, Response } from "express";
+import express, {Application, Request, Response } from "express";
 import cors from "cors"
 import dotenv from "dotenv";
-import { connectDB } from "./DB/ConnectDB";
+import prisma from "./DB/Prisma";
 
 dotenv.config()
-const app = express();
+const app : Application= express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json()) 
@@ -20,14 +20,18 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 const startServer = async () => {
-  connectDB().then(() => {
+
+  try {
+
+    await prisma.$connect()
+    console.log("Connected to the database successfully Via prisma.");
     app.listen(PORT,() => {
       console.log(`Server is running on port ${PORT}`);
     })
-  }).catch((err : Error) => {
-    console.error("Failed to connect to the database:", err);
-    process.exit(1); 
-  })
+  } catch (err : Error | unknown) {
+    console.error("Failed to start the server:", err);
+    process.exit(1);
+  }
 }
 
 startServer();
