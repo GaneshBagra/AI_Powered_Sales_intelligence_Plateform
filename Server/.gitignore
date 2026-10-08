@@ -30,3 +30,8 @@ pnpm-debug.log*
 
 # Prisma Generated Client (Only if output is custom-targeted inside src)
 /src/generated/prisma
+
+.env
+.env.*
+!.env.example
+src/generated

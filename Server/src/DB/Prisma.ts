@@ -1,4 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
+import {PrismaClient} from "../generated/client";
 import dotenv from "dotenv"
 dotenv.config()
 
