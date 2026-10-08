@@ -1,24 +1,35 @@
 import express, { Request, Response } from "express";
+import cors from "cors"
+import dotenv from "dotenv";
 import { connectDB } from "./DB/ConnectDB";
 
+dotenv.config()
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.get("/", (req: Request, res: Response) => {
-  console.log("Hello world");
+app.use(express.json()) 
+app.use(cors())
+
+
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({
+    message : "server is healthy and running",
+    status : "OK",
+    timestamp : new Date().toISOString()
+  })
 });
 
-connectDB()
-  .then(() => {
-    console.log("Database connection established, starting server...");
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-
+const startServer = async () => {
+  connectDB().then(() => {
+    app.listen(PORT,() => {
+      console.log(`Server is running on port ${PORT}`);
+    })
+  }).catch((err : Error) => {
+    console.error("Failed to connect to the database:", err);
+    process.exit(1); 
   })
-  .catch((err: Error) => {
-    console.log("Failed to connect to database, server not started", err);
-  });
+}
+
+startServer();
 
 

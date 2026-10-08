@@ -16,7 +16,6 @@ export const connectDB = async () : Promise<void> => {
   const client = await pool.connect()
   try {
     await client.query("SELECT 1");
-    console.log(client)
     console.log("Database connection pool verified successfully");
 
   }finally {
