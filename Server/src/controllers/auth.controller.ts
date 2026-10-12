@@ -2,7 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import prisma from "../DB/Prisma";
 import { Role } from "../generated/browser";
-import { createHash,compareHash } from "../utils/PasswordUtils";
+import { createHash, compareHash } from "../utils/PasswordUtils";
 import { ApiResponse } from "../utils/ApiResponse";
 
 interface RegisterData {
@@ -20,38 +20,51 @@ export const registerContoller = async (
   if (!fullName || !username || !password || !role) {
     return res
       .status(400)
-      .json(new ApiResponse(false, "Missing required fields", null, 400));
+      .json(new ApiResponse(false, "Missing required fields", null));
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { username },
-  });
-  if (existingUser) {
-    res.status(403).json(new ApiResponse(false, "User already exists", null, 403));
-    return;
+  try {
+    const existingUser = await prisma.user.findUnique({
+      where: { username },
+    });
+    if (existingUser) {
+      res
+        .status(403)
+        .json(new ApiResponse(false, "User already exists", null));
+      return;
+    }
+
+    const hashPassword = await createHash(password);
+
+    const createUser = await prisma.user.create({
+      data: {
+        fullName,
+        passwordHash: hashPassword,
+        username,
+        role,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        username: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(true, "User created successfully", createUser),
+      );
+  } catch (erro) {
+    res
+      .status(500)
+      .json(
+        new ApiResponse(false, "Internal server error try again", null),
+      );
   }
-
-  const hashPassword = await createHash(password);
-  console.log("hashPassword", hashPassword);
-
-  const createUser = await prisma.user.create({
-    data: {
-      fullName,
-      passwordHash: hashPassword,
-      username,
-      role,
-    },
-    select: {
-      id: true,
-      fullName: true,
-      username: true,
-      role: true,
-      isActive: true,
-      createdAt: true,
-    },
-  });
-
-  res.status(200).json(new ApiResponse(true, "User created successfully", createUser, 200));
 };
 
 export const loginController = async (
@@ -60,24 +73,25 @@ export const loginController = async (
 ) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    res.status(400).json(new ApiResponse(false, "Missing required fields", null, 400));
+    res
+      .status(400)
+      .json(new ApiResponse(false, "Missing required fields", null));
     return;
   }
 
   const user = await prisma.user.findUnique({
-    where : {username}
-
-  })
+    where: { username },
+  });
 
   if (!user) {
-    res.status(404).json(new ApiResponse(false, "User not found", null, 404));
+    res.status(404).json(new ApiResponse(false, "Invalid username or password", null));
     return;
   }
 
-  const isPassowrdValid = await compareHash(password, user.passwordHash)
+  const isPassowrdValid = await compareHash(password, user.passwordHash);
   if (!isPassowrdValid) {
-    res.status(401).json(new ApiResponse(false, "Invalid password", null, 401));
+    res.status(401).json(new ApiResponse(false, "Invalid username or password", null));
     return;
   }
-//   now send a authentication token to client or store it into Authentication header 
+  //   now send a authentication token to client or store it into Authentication header
 };
