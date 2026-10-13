@@ -1,4 +1,5 @@
-import { Response } from "express";
+import { Response,Request } from "express";
+import Jwt  from "jsonwebtoken";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import prisma from "../DB/Prisma";
 import { Role } from "../generated/browser";
@@ -10,6 +11,21 @@ interface RegisterData {
   password: string;
   fullName: string;
   role: Role;
+}
+
+const sign_JWT_Token = async (user : any) => {
+  const key = process.env.JWT_SECRET as string;
+  const token = await Jwt.sign(
+      {
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        fullName: user.fullName,
+      },
+      key,
+      { expiresIn: "1d" },
+    );
+  return token;
 }
 
 export const registerContoller = async (
@@ -28,9 +44,7 @@ export const registerContoller = async (
       where: { username },
     });
     if (existingUser) {
-      res
-        .status(403)
-        .json(new ApiResponse(false, "User already exists", null));
+      res.status(403).json(new ApiResponse(false, "User already exists", null));
       return;
     }
 
@@ -55,20 +69,16 @@ export const registerContoller = async (
 
     res
       .status(200)
-      .json(
-        new ApiResponse(true, "User created successfully", createUser),
-      );
+      .json(new ApiResponse(true, "User created successfully", createUser));
   } catch (erro) {
     res
       .status(500)
-      .json(
-        new ApiResponse(false, "Internal server error try again", null),
-      );
+      .json(new ApiResponse(false, "Internal server error try again", null));
   }
 };
 
 export const loginController = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
 ) => {
   const { username, password } = req.body;
@@ -79,19 +89,46 @@ export const loginController = async (
     return;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { username },
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username },
+    });
 
-  if (!user) {
-    res.status(404).json(new ApiResponse(false, "Invalid username or password", null));
-    return;
-  }
+    if (!user) {
+      res
+        .status(404)
+        .json(new ApiResponse(false, "Invalid username or password", null));
+      return;
+    }
 
-  const isPassowrdValid = await compareHash(password, user.passwordHash);
-  if (!isPassowrdValid) {
-    res.status(401).json(new ApiResponse(false, "Invalid username or password", null));
-    return;
+    const isPassowrdValid = await compareHash(password, user.passwordHash);
+    if (!isPassowrdValid) {
+      res
+        .status(401)
+        .json(new ApiResponse(false, "Invalid username or password", null));
+      return;
+    }
+    
+    const token = await sign_JWT_Token(user)
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    })
+
+    return res.status(200).json(
+      new ApiResponse(true, "Login successful", {
+        username : user.username,
+        fullName : user.fullName,
+        role : user.role,
+        id : user.id,
+      }),
+    );
+  } catch (err: any) {
+    res
+      .status(500)
+      .json(new ApiResponse(false, "Internal server error try again", null));
   }
-  //   now send a authentication token to client or store it into Authentication header
 };
