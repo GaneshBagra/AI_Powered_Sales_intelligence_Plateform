@@ -96,7 +96,7 @@ export const loginController = async (
 
     if (!user) {
       res
-        .status(404)
+        .status(401)
         .json(new ApiResponse(false, "Invalid username or password", null));
       return;
     }
