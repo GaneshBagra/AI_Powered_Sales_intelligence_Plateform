@@ -30,3 +30,28 @@ model User {
   @@map("users")
 
 }
+
+enum duplicationStatus {
+  REPEAT
+  NEW
+}
+
+model Orders {
+  id String @id @default(uuid())
+  custId String 
+  PONumber String @map("PO_number")
+  PODate DateTime @map("PO_date")
+  shipDate DateTime @map("ship_date")
+  partNumber String @map("part_number")
+  partDuplicationStatus duplicationStatus @map("part_duplication_status")
+  catCode String @map("cat_code")
+  pricePerPiece String @map("price_per_piece")
+  POQTY Int @map("po_qty")
+  finishWeight Int @map("finish_weight")
+  boxQTY Int @map("box_QTY")
+  bookingQty Int @map("booking_qty")
+  status String 
+  invoiceNumber String @map("invoice_number")
+  invoiceQTY String @map("invoice_qty")
+  @@map("orders")
+}
