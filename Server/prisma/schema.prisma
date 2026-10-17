@@ -38,20 +38,23 @@ enum duplicationStatus {
 
 model Orders {
   id String @id @default(uuid())
+  employeeCode String @map("employee_code")
   custId String 
-  PONumber String @map("PO_number")
-  PODate DateTime @map("PO_date")
+  PONumber String @map("po_number")
+  PODate DateTime @map("po_date")
   shipDate DateTime @map("ship_date")
   partNumber String @map("part_number")
+  partDescription String @map("part_description") @db.Text
   partDuplicationStatus duplicationStatus @map("part_duplication_status")
   catCode String @map("cat_code")
   pricePerPiece String @map("price_per_piece")
   POQTY Int @map("po_qty")
-  finishWeight Int @map("finish_weight")
-  boxQTY Int @map("box_QTY")
+  finishWeight Int @map("finish_weight") 
+  boxQTY Int @map("box_qty")
   bookingQty Int @map("booking_qty")
   status String 
   invoiceNumber String @map("invoice_number")
   invoiceQTY String @map("invoice_qty")
+  realisationPerKG Int @map("realisation_per_kg")
   @@map("orders")
 }

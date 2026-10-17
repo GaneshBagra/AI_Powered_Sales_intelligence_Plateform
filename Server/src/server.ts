@@ -3,6 +3,7 @@ import cors from "cors"
 import dotenv from "dotenv";
 import prisma from "./DB/Prisma";
 import authRoutes from "./routes/auth.routes"
+import orderRoutes from "./routes/order.route"
 
 dotenv.config()
 const app : Application= express();
@@ -24,6 +25,7 @@ app.get("/health", (req: Request, res: Response) => {
 });
 // Auth routes
 app.use("/api/auth", authRoutes)
+app.use("/api/order/", orderRoutes)
 
 
 
