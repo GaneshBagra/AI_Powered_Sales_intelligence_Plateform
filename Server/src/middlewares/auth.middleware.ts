@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
 
 export const authMiddleware = (req:AuthenticatedRequest,res:Response,next :NextFunction) : void => {
     console.log(req.headers.authorization)
-    const headerToken = req.headers.authorization?.split(" ")[1]
+    const headerToken = req.headers.cookie?.split("=")[1]
 
     if (!headerToken) {
         res.status(401).json({
