@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/Theme.tsx";
 
 interface FormData {
@@ -9,12 +10,17 @@ interface FormData {
 interface LoginResponse {
   success?: boolean;
   message?: string;
+  data?: {
+    username?: string;
+    fullName?: string;
+  };
 }
 
 const url = import.meta.env.VITE_API_URL;
 const apiUrl = url ? `${url.replace(/\/+$/, "")}/` : "";
 
 export const LoginPage = () => {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,7 +72,11 @@ export const LoginPage = () => {
           result.message || "Login failed. Please check your username and password.",
         );
       }
+      if (result.data) {
+        localStorage.setItem("sales-user", JSON.stringify(result.data));
+      }
       setSuccessMessage(result.message || "Login successful.");
+      navigate("/dashboard");
     } catch (err) {
       setError(
         err instanceof Error

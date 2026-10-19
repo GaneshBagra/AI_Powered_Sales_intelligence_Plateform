@@ -93,7 +93,7 @@ export const loginController = async (
     const user = await prisma.user.findUnique({
       where: { username },
     });
-
+    
     if (!user) {
       res
         .status(401)

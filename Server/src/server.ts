@@ -28,7 +28,7 @@ app.get("/health", (req: Request, res: Response) => {
 });
 // Auth routes
 app.use("/api/auth", authRoutes)
-app.use("/api/order/", orderRoutes)
+app.use("/api/order", orderRoutes)
 
 
 
