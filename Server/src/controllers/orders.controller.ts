@@ -5,8 +5,6 @@ import prisma from "../DB/Prisma";
 import { AuthenticatedUserPayload } from "../utils/types";
 import { Prisma } from "../generated/client";
 
-
-
 export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { custId, PONumber, PODate, shipDate, items } = req.body;
@@ -30,7 +28,6 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
         );
     }
 
-    
     const poDate = new Date(PODate);
     const shippingDate = new Date(shipDate);
 
@@ -43,14 +40,12 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
         .json(new ApiResponse(false, "Invalid PODate or shipDate", null));
     }
 
-    
     if (!Array.isArray(items) || items.length === 0) {
       return res
         .status(400)
         .json(new ApiResponse(false, "At least one item is required", null));
     }
 
-    
     for (const [index, item] of items.entries()) {
       if (
         !item ||
@@ -186,16 +181,16 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 export const fetchOrders = async (req: AuthenticatedRequest, res: Response) => {
-  const {custId}  = req.params as {custId : string}
+  const { custId } = req.params as { custId: string };
   const user: AuthenticatedUserPayload | undefined = req.user;
 
- if (!custId || !custId.trim()) {
-    return res.status(400).json(
-      new ApiResponse(false, "Customer ID is required", null)
-    );
+  if (!custId || !custId.trim()) {
+    return res
+      .status(400)
+      .json(new ApiResponse(false, "Customer ID is required", null));
   }
 
- try {
+  try {
     const orders = await prisma.orders.findMany({
       where: {
         custId: custId.trim(),
@@ -208,21 +203,64 @@ export const fetchOrders = async (req: AuthenticatedRequest, res: Response) => {
       },
     });
 
-    return res.status(200).json(
-      new ApiResponse(
-        true,
-        "Customer orders fetched successfully",
-        orders
-      )
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(true, "Customer orders fetched successfully", orders),
+      );
   } catch (err) {
     console.error("Get customer orders error:", err);
 
-    return res.status(500).json(
-      new ApiResponse(false, "Something went wrong. Please try again.", null)
-    );
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(false, "Something went wrong. Please try again.", null),
+      );
+  }
+};
+
+export const fetchItemDetails = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  const searchQuery = req.body.searchQuery;
+
+  if (typeof searchQuery !== "string" || !searchQuery.trim()) {
+    res
+      .status(400)
+      .json(new ApiResponse(false, "Please enter a part number", null));
+    return;
   }
 
-  
-  
+  try {
+    const items = await prisma.items.findMany({
+      where: {
+        partNumber: {
+          startsWith: searchQuery.trim(),
+          mode: "insensitive",
+        },
+      },
+      distinct: ["partNumber"],
+      select: {
+        partNumber: true,
+        partDescription: true,
+        catCode: true,
+        finishWeight: true,
+      },
+      orderBy: {
+        partNumber: "asc",
+      },
+      take: 10,
+    });
+
+    res
+      .status(200)
+      .json(new ApiResponse(true, "Item search completed successfully", items));
+  } catch (err: unknown) {
+    console.error("Fetch item details error:", err);
+
+    res
+      .status(500)
+      .json(new ApiResponse(false, "Failed to search items", null));
+  }
 };
