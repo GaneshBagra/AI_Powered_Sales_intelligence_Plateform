@@ -3,84 +3,133 @@ import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { ApiResponse } from "../utils/ApiResponse";
 import prisma from "../DB/Prisma";
 import { AuthenticatedUserPayload } from "../utils/types";
+import { Prisma } from "../generated/client";
 
-type partDuplicationStatus = "NEW" | "REPEAT";
+
 
 export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
-  const {
-    custId,
-    PONumber,
-    PODate,
-    shipDate,
-    partNumber,
-    pricePerPiece,
-    POQTY,
-    catCode,
-    finishWeight,
-    partDescription,
-  } = req.body;
-  if (
-    !custId ||
-    !PONumber ||
-    !PODate ||
-    !shipDate ||
-    !partNumber ||
-    !partDescription ||
-    pricePerPiece == null ||
-    POQTY == null
-  ) {
-    res
-      .status(401)
-      .json(new ApiResponse(false, "Please enter necessary fields", null));
-    return;
-  }
   try {
-    const user: any = req.user;
+    const { custId, PONumber, PODate, shipDate, items } = req.body;
 
-    const partExists = await prisma.orders.findFirst({
-      where: { partNumber },
-    });
-    let partDuplicationStatus: partDuplicationStatus = "REPEAT";
-    if (partExists) {
-      partDuplicationStatus = "REPEAT";
-    } else {
-      partDuplicationStatus = "NEW";
+    if (
+      typeof custId !== "string" ||
+      !custId.trim() ||
+      typeof PONumber !== "string" ||
+      !PONumber.trim() ||
+      !PODate ||
+      !shipDate
+    ) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            false,
+            "Please enter all required order fields",
+            null,
+          ),
+        );
     }
 
-    const realisationPerKG =
-      finishWeight == null ? undefined : (pricePerPiece * finishWeight) / 1000;
+    
+    const poDate = new Date(PODate);
+    const shippingDate = new Date(shipDate);
 
-    const createdOrder = await prisma.orders.create({
+    if (
+      Number.isNaN(poDate.getTime()) ||
+      Number.isNaN(shippingDate.getTime())
+    ) {
+      return res
+        .status(400)
+        .json(new ApiResponse(false, "Invalid PODate or shipDate", null));
+    }
+
+    
+    if (!Array.isArray(items) || items.length === 0) {
+      return res
+        .status(400)
+        .json(new ApiResponse(false, "At least one item is required", null));
+    }
+
+    
+    for (const [index, item] of items.entries()) {
+      if (
+        !item ||
+        typeof item.partNumber !== "string" ||
+        !item.partNumber.trim() ||
+        typeof item.partDescription !== "string" ||
+        !item.partDescription.trim() ||
+        typeof item.POQTY !== "number" ||
+        !Number.isInteger(item.POQTY) ||
+        item.POQTY <= 0 ||
+        typeof item.pricePerPiece !== "number" ||
+        !Number.isFinite(item.pricePerPiece)
+      ) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              false,
+              `Invalid required fields for item at index ${index}`,
+              null,
+            ),
+          );
+      }
+
+      if (
+        item.partDuplicationStatus !== undefined &&
+        !["NEW", "REPEAT"].includes(item.partDuplicationStatus)
+      ) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              false,
+              `Invalid partDuplicationStatus for item at index ${index}`,
+              null,
+            ),
+          );
+      }
+    }
+    const user = req?.user as AuthenticatedUserPayload;
+
+    if (!user) {
+      return res
+        .status(401)
+        .json(new ApiResponse(false, "Unauthorized access", null));
+    }
+
+    const order = await prisma.orders.create({
       data: {
-        employeeCode: user.username,
-        custId,
-        PONumber,
-        PODate: new Date(PODate),
-        shipDate: new Date(shipDate),
-        partNumber,
-        partDescription,
-        pricePerPiece,
-        POQTY,
-        catCode: catCode ?? undefined,
-        finishWeight: finishWeight ?? undefined,
-        realisationPerKG: realisationPerKG ?? undefined,
-      },
-      select: {
-        id: true,
-        employeeCode: true,
-        custId: true,
-        PONumber: true,
-        PODate: true,
-        shipDate: true,
-        partNumber: true,
-        partDescription: true,
-        partDuplicationStatus: true,
-        pricePerPiece: true,
-        POQTY: true,
-        catCode: true,
-        finishWeight: true,
-        realisationPerKG: true,
-        status: true,
+        employeeCode: user?.username,
+        custId: custId.trim(),
+        PONumber: PONumber.trim(),
+        PODate: poDate,
+        shipDate: shippingDate,
+        items: {
+          create: items.map((item: any) => ({
+            partNumber: item.partNumber.trim(),
+            partDescription: item.partDescription.trim(),
+            partDuplicationStatus: item.partDuplicationStatus ?? "NEW",
+            pricePerPiece: new Prisma.Decimal(item.pricePerPiece),
+            POQTY: item.POQTY,
+
+            catCode: item.catCode ?? null,
+            finishWeight:
+              item.finishWeight == null
+                ? null
+                : new Prisma.Decimal(item.finishWeight),
+            realisationPerKG:
+              item.realisationPerKG == null
+                ? null
+                : new Prisma.Decimal(item.realisationPerKG),
+
+            boxQTY: item.boxQTY ?? null,
+            bookingQty: item.bookingQty ?? null,
+            status: item.status ?? "PENDING",
+            invoiceNumber: item.invoiceNumber ?? null,
+            invoiceQTY: item.invoiceQTY ?? null,
+          })),
+        },
       },
     });
 
@@ -89,24 +138,28 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
       .json(
         new ApiResponse(
           true,
-          `Order for customer ${custId} created successfully`,
-          createdOrder,
+          `Order for customer ${custId} created successfully for PO Number ${order.PONumber}`,
         ),
       );
   } catch (err: any) {
-    res
-      .status(400)
-      .json(
-        new ApiResponse(false, "Something went wrong please try again", null),
-      );
-  }
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return res
+        .status(409)
+        .json(new ApiResponse(false, "This PO number already exists", null));
+    }
 
-  // check the necessary values if not found then send message accordingly
+    return res
+      .status(500)
+      .json(new ApiResponse(false, "Failed to create order", null));
+  }
 };
 
 export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
-  const { orderIds }: { orderIds: string[] } = req.body;
-  if (Array.isArray(orderIds) && orderIds.length == 0) {
+  const { poNumbers }: { poNumbers: string[] } = req.body;
+  if (Array.isArray(poNumbers) && poNumbers.length == 0) {
     res
       .send(403)
       .json(new ApiResponse(false, "Please select atleast on user id", null));
@@ -114,8 +167,8 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const deletedOrders = await prisma.orders.deleteMany({
       where: {
-        id: {
-          in: orderIds,
+        PONumber: {
+          in: poNumbers,
         },
       },
     });
@@ -132,20 +185,44 @@ export const deleteOrder = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+export const fetchOrders = async (req: AuthenticatedRequest, res: Response) => {
+  const {custId}  = req.params as {custId : string}
+  const user: AuthenticatedUserPayload | undefined = req.user;
 
-export const fetchOrders = async (req:AuthenticatedRequest,res:Response) => {
-  const user : AuthenticatedUserPayload | undefined =  req.user
-
-  const orders = await prisma.orders.findMany({
-    where: {
-      employeeCode : user?.username
-    }
-  })
-  try{
-    
-  }catch(err : any) {
-    res.send(500).json(
-      new ApiResponse(false,"Something went wong try again", null)
-    )
+ if (!custId || !custId.trim()) {
+    return res.status(400).json(
+      new ApiResponse(false, "Customer ID is required", null)
+    );
   }
-}
+
+ try {
+    const orders = await prisma.orders.findMany({
+      where: {
+        custId: custId.trim(),
+      },
+      include: {
+        items: true,
+      },
+      orderBy: {
+        PODate: "desc",
+      },
+    });
+
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        "Customer orders fetched successfully",
+        orders
+      )
+    );
+  } catch (err) {
+    console.error("Get customer orders error:", err);
+
+    return res.status(500).json(
+      new ApiResponse(false, "Something went wrong. Please try again.", null)
+    );
+  }
+
+  
+  
+};

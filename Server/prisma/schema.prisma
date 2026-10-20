@@ -37,12 +37,22 @@ enum duplicationStatus {
 }
 
 model Orders {
+  id           String   @id @default(uuid())
+  employeeCode String   @map("employee_code")
+  custId       String
+  PONumber     String   @unique @map("po_number")
+  PODate       DateTime @map("po_date")
+  shipDate     DateTime @map("ship_date")
+
+  items        items[]
+
+  @@map("orders")
+}
+
+model items {
   id                    String            @id @default(uuid())
-  employeeCode          String            @map("employee_code")
-  custId                String
   PONumber              String            @map("po_number")
-  PODate                DateTime          @map("po_date")
-  shipDate              DateTime          @map("ship_date")
+
   partNumber            String            @map("part_number")
   partDescription       String            @map("part_description") @db.Text
   partDuplicationStatus duplicationStatus @default(NEW) @map("part_duplication_status")
@@ -50,14 +60,17 @@ model Orders {
   POQTY                 Int               @map("po_qty")
 
   catCode               String?           @map("cat_code")
-  finishWeight          Decimal?           @map("finish_weight") @db.Decimal(12, 3)
-  realisationPerKG      Decimal?           @map("realisation_per_kg") @db.Decimal(12, 3)
+  finishWeight          Decimal?          @map("finish_weight") @db.Decimal(12, 3)
+  realisationPerKG      Decimal?          @map("realisation_per_kg") @db.Decimal(12, 3)
 
   boxQTY                Int?              @map("box_qty")
   bookingQty            Int?              @map("booking_qty")
   status                String            @default("PENDING")
-  invoiceNumber         String?           @map("invoice_number")
-  invoiceQTY            String?           @map("invoice_qty")
+  invoiceNumber         String?            @map("invoice_number")
+  invoiceQTY            String?            @map("invoice_qty")
 
-  @@map("orders")
+  order                 Orders            @relation(fields: [PONumber], references: [PONumber], onDelete: Cascade)
+
+  @@index([PONumber])
+  @@map("items")
 }
