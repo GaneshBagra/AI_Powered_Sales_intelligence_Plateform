@@ -5,6 +5,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AddExportOrderPage, BacklogsPage, ExportOrderListPage } from "./pages/OrderPages";
 import { AppShell } from "./components/AppShell";
+import { UserLoggedOutPage } from "./pages/UserLoggedOutPage";
 
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
       <ThemeProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/userLoggedOut" element={<UserLoggedOutPage />} />
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/orders/add" element={<AddExportOrderPage />} />

@@ -65,6 +65,10 @@
 .form-message--error { color: #842029; background: #f8d7da; }
 .form-message--success { color: #0f5132; background: #d1e7dd; }
 .empty-state { margin-top: 32px; padding: 38px; color: var(--text-secondary); text-align: center; font-size: 13px; }
+.logged-out-page { min-height: 100svh; display: grid; place-items: center; padding: 24px; color: var(--text-primary); background: var(--page-background); }
+.logged-out-card { width: min(100%, 430px); padding: 38px; border: 1px solid var(--line); border-radius: 16px; background: var(--card-background); box-shadow: 0 20px 60px rgb(0 0 0 / 0.08); }
+.logged-out-card h1 { margin: 8px 0 0; font-size: clamp(28px, 6vw, 40px); letter-spacing: -0.05em; line-height: 1.05; }
+.logged-out-card p:not(.eyebrow) { margin: 14px 0 26px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
 
 @media (max-width: 700px) {
   .app-navbar__inner { width: min(100% - 28px, 1180px); gap: 18px; }

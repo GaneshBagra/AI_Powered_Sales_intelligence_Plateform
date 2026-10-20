@@ -1,92 +1,34 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/Theme.tsx";
-
-interface FormData {
-  username: string;
-  password: string;
-}
-
-interface LoginResponse {
-  success?: boolean;
-  message?: string;
-  data?: {
-    username?: string;
-    fullName?: string;
-  };
-}
-
-const url = import.meta.env.VITE_API_URL;
-const apiUrl = url ? `${url.replace(/\/+$/, "")}/` : "";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { clearAuthError, login } from "../store/authSlice";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const dispatch = useAppDispatch();
+  const { status, error } = useAppSelector((state) => state.auth);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
-  const [error, setError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
 
   const onChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) {
-      setError("");
-    }
-    if (successMessage) {
-      setSuccessMessage("");
-    }
+    dispatch(clearAuthError());
+    setSuccessMessage("");
   };
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError("");
     setSuccessMessage("");
-    setIsSubmitting(true);
-
-    try {
-      const res = await fetch(`${apiUrl}auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-        credentials: "include",
-      });
-      const responseText = await res.text();
-      let result: LoginResponse = {};
-
-      if (responseText) {
-        try {
-          result = JSON.parse(responseText) as LoginResponse;
-        } catch {
-          throw new Error("The server returned an invalid response. Please try again.");
-        }
-      }
-
-      if (!res.ok || !result.success) {
-        throw new Error(
-          result.message || "Login failed. Please check your username and password.",
-        );
-      }
-      if (result.data) {
-        localStorage.setItem("sales-user", JSON.stringify(result.data));
-      }
-      setSuccessMessage(result.message || "Login successful.");
+    const result = await dispatch(login(formData));
+    if (login.fulfilled.match(result)) {
+      setSuccessMessage("Login successful.");
       navigate("/dashboard");
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message === "Failed to fetch"
-            ? "Unable to connect to the server. Please try again."
-            : err.message
-          : "Unable to log in right now. Please try again.",
-      );
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -196,9 +138,9 @@ export const LoginPage = () => {
           <button
             className="login-button btn w-100"
             type="submit"
-            disabled={isSubmitting}
+            disabled={status === "loading"}
           >
-            {isSubmitting ? "Signing in..." : "Log in"}
+            {status === "loading" ? "Signing in..." : "Log in"}
           </button>
         </form>
       </section>

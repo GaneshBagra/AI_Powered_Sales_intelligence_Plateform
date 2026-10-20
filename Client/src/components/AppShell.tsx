@@ -1,23 +1,44 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { useTheme } from "../context/Theme";
-
-interface UserDetails {
-  username?: string;
-  fullName?: string;
-}
+import { clearAuth, logout, verifySession } from "../store/authSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 export const AppShell = () => {
   const { theme, toggleTheme } = useTheme();
-  const storedUser = localStorage.getItem("sales-user");
-  let user: UserDetails = {};
-  if (storedUser) {
-    try {
-      user = JSON.parse(storedUser) as UserDetails;
-    } catch {
-      user = {};
+  const dispatch = useAppDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const user = useAppSelector((state) => state.auth.user);
+  const isLoggingOut = useAppSelector((state) => state.auth.status === "loading");
+  const displayName = user?.fullName || user?.username || "User";
+
+  const handleLogout = async () => {
+    const result = await dispatch(logout());
+    if (logout.fulfilled.match(result)) {
+      dispatch(clearAuth());
+      navigate("/userLoggedOut", { replace: true });
     }
-  }
-  const displayName = user.fullName || user.username || "User";
+  };
+
+  useEffect(() => {
+    let isCurrentRoute = true;
+
+    dispatch(verifySession()).then((result) => {
+      if (
+        isCurrentRoute &&
+        verifySession.rejected.match(result) &&
+        result.payload?.unauthorized
+      ) {
+        dispatch(clearAuth());
+        navigate("/userLoggedOut", { replace: true });
+      }
+    });
+
+    return () => {
+      isCurrentRoute = false;
+    };
+  }, [dispatch, location.pathname, navigate]);
 
   return (
     <div className="app-shell">
@@ -55,9 +76,11 @@ export const AppShell = () => {
             </button>
             <div className="user-menu__details">
               <strong>{displayName}</strong>
-              {user.username && <span>@{user.username}</span>}
+              {user?.username && <span>@{user.username}</span>}
               <button type="button">Change password</button>
-              <button type="button">Logout</button>
+              <button type="button" onClick={handleLogout} disabled={isLoggingOut}>
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </button>
             </div>
           </div>
         </div>

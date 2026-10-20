@@ -132,3 +132,23 @@ export const loginController = async (
       .json(new ApiResponse(false, "Internal server error try again", null));
   }
 };
+
+export const logoutController = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  res.status(200).json(
+    new ApiResponse(
+      true,
+      "User logged out successfully",
+      null
+    )
+  );
+};
