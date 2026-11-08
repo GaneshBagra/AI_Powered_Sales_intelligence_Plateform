@@ -1,75 +1,50 @@
-# React + TypeScript + Vite
+# Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Libraries to install
 
-Currently, two official plugins are available:
+Runtime dependencies:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install @reduxjs/toolkit @types/react-router-dom bootstrap dotenv react react-dom react-redux react-router-dom
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Development dependencies:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+npm install -D @eslint/js @types/node @types/react @types/react-dom @vitejs/plugin-react eslint eslint-plugin-react-hooks eslint-plugin-react-refresh globals typescript typescript-eslint vite
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## APIs used
 
+The client uses the server URL from `VITE_API_URL`. Requests include cookies with `credentials: "include"`.
+
+| Method | Endpoint | Used for | Request body |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | Authenticate a user | `{ "username": "string", "password": "string" }` |
+| `GET` | `/api/auth/me` | Verify the current session | None |
+| `POST` | `/api/auth/logout` | End the current session | None |
+| `POST` | `/api/order/fetch-item-details` | Search item suggestions by part number | `{ "searchQuery": "string" }` |
+| `POST` | `/api/order/addOrder` | Create an order with its items | See the order payload below |
+
+Order creation payload:
+
+```json
+{
+  "custId": "CUSTOMER001",
+  "PONumber": "PO-1001",
+  "PODate": "2026-10-24",
+  "shipDate": "2026-11-01",
+  "items": [
+    {
+      "partNumber": "PART-001",
+      "partDescription": "Part description",
+      "partDuplicationStatus": "NEW",
+      "pricePerPiece": 10.5,
+      "POQTY": 100,
+      "catCode": "CAT-01",
+      "finishWeight": 2.5,
+      "realisationPerKG": 26.25
+    }
+  ]
+}
 ```
